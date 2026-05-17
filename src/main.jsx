@@ -110,6 +110,13 @@ const safeFocusStats = (value) => ({
     xp: safeNumber(entry?.xp, 0, 0, 5000)
   })) : []
 });
+const safeCandleFocus = (value) => ({
+  preset: safeNumber(value?.preset, 60, 15, 180),
+  glow: safeNumber(value?.glow, 72, 20, 100),
+  ambience: typeof value?.ambience === "string" ? value.ambience : "Library hush",
+  soundOn: Boolean(value?.soundOn),
+  previewSeconds: safeNumber(value?.previewSeconds, 60 * 60, 60, 180 * 60)
+});
 const safeTasks = (value) => Array.isArray(value) ? value.map((task) => ({
   id: task?.id || uid(),
   title: typeof task?.title === "string" ? task.title : "",
@@ -123,6 +130,64 @@ const safeNotes = (value) => Array.isArray(value) ? value.map((note) => ({
   content: typeof note?.content === "string" ? note.content : "",
   createdAt: typeof note?.createdAt === "string" ? note.createdAt : nowIso()
 })).filter((note) => note.title.trim()) : [];
+const safeProfile = (value, authUser = null) => ({
+  id: authUser?.uid || value?.id || "",
+  name: typeof value?.name === "string" && value.name.trim() ? value.name : authUser?.displayName || "",
+  email: typeof value?.email === "string" && value.email.trim() ? value.email : authUser?.email || "",
+  level: typeof value?.level === "string" ? value.level : "Freshman",
+  age: value?.age ?? "",
+  gender: typeof value?.gender === "string" ? value.gender : "Male",
+  photoURL: typeof value?.photoURL === "string" ? value.photoURL : authUser?.photoURL || "",
+  createdAt: typeof value?.createdAt === "string" ? value.createdAt : nowIso()
+});
+const safeAiMessages = (value, userName = "there") => {
+  const messages = Array.isArray(value)
+    ? value
+      .filter((message) => message && typeof message.text === "string" && message.text.trim())
+      .map((message) => ({ role: message.role === "user" ? "user" : "assistant", text: message.text }))
+    : [];
+  return messages.length ? messages : [{ role: "assistant", text: `Hi ${String(userName || "there").split(" ")[0] || "there"}! I'm Masari Buddy. Upload a PDF, DOCX, or TXT file, or ask me for study help.` }];
+};
+const defaultFlight = {
+  tripId: "ams",
+  origin: "Cairo",
+  destination: "Amsterdam",
+  hours: 4,
+  minutes: 0,
+  elapsedSeconds: 0,
+  totalSeconds: 4 * 60 * 60,
+  mode: "solo",
+  syncStartMinutes: 0,
+  status: "ready",
+  startedAt: null,
+  lastElapsedSeconds: 0,
+  arrived: false,
+  xp: 0
+};
+const safeFlight = (value) => {
+  const base = { ...defaultFlight, ...(value && typeof value === "object" ? value : {}) };
+  const hours = safeNumber(base.hours, 4, 0, 48);
+  const minutes = safeNumber(base.minutes, 0, 0, 59);
+  const totalSeconds = Math.max(60, Math.round(hours * 3600 + minutes * 60));
+  const status = ["ready", "flying", "paused", "arrived"].includes(base.status) ? base.status : "ready";
+  return {
+    ...base,
+    tripId: flightTrips.some((trip) => trip.id === base.tripId) ? base.tripId : "ams",
+    origin: flightCities[base.origin] ? base.origin : "Cairo",
+    destination: flightCities[base.destination] ? base.destination : "Amsterdam",
+    hours,
+    minutes,
+    totalSeconds,
+    mode: base.mode === "sync" ? "sync" : "solo",
+    syncStartMinutes: safeNumber(base.syncStartMinutes, 0, 0, 100000),
+    elapsedSeconds: safeNumber(base.elapsedSeconds, 0, 0, totalSeconds),
+    lastElapsedSeconds: safeNumber(base.lastElapsedSeconds, base.elapsedSeconds || 0, 0, totalSeconds),
+    status,
+    startedAt: status === "flying" && Number.isFinite(Number(base.startedAt)) ? Number(base.startedAt) : null,
+    arrived: Boolean(base.arrived),
+    xp: safeNumber(base.xp, 0, 0, 1000000)
+  };
+};
 
 const dayStamp = (value = new Date()) => new Date(value).toISOString().slice(0, 10);
 const previousDayStamp = (stamp) => {
@@ -156,11 +221,25 @@ const applyFocusSession = (current, minutes) => {
 function useUserDocState(userId, key, fallbackValue, sanitize) {
   const fallbackStorageKey = userId ? cloudKey(userId, key) : null;
   const [state, setState] = useState(() => sanitize(fallbackStorageKey ? store.get(fallbackStorageKey, fallbackValue) : fallbackValue));
+  const [loading, setLoading] = useState(false);
+  const [error] = useState("");
+
+  useEffect(() => {
+    if (!fallbackStorageKey) {
+      setState(sanitize(fallbackValue));
+      setLoading(false);
+      return;
+    }
+    const fallback = sanitize(store.get(fallbackStorageKey, fallbackValue));
+    setState((current) => sameJson(current, fallback) ? current : fallback);
+  }, [fallbackStorageKey, fallbackValue, sanitize]);
+
   useEffect(() => {
     if (!fallbackStorageKey) return;
     store.set(fallbackStorageKey, state);
   }, [fallbackStorageKey, state]);
-  return [state, setState];
+
+  return [state, setState, { loading, error }];
 }
 
 function Buddy({ size = 80, anim = true }) {
@@ -194,11 +273,121 @@ function Buddy({ size = 80, anim = true }) {
   );
 }
 
+function Landing({ onStart, onLogin }) {
+  const features = [
+    { icon: "✓", color: "#7c3aed", title: "Smart Tasks", text: "Priority task management" },
+    { icon: "N", color: "#a855f7", title: "Study Notes", text: "Searchable rich notes" },
+    { icon: "25", color: "#a3e635", title: "Pomodoro", text: "Focus and break sessions" },
+    { icon: "AI", color: "#ec4899", title: "AI Buddy", text: "Document-aware study help" }
+  ];
+
+  return (
+    <main className="mesh landing">
+      <nav className="topbar">
+        <div className="brand"><Buddy size={36} anim={false} /><span>Masari</span></div>
+        <div className="row">
+          <button className="btn-ghost" onClick={onLogin}>Login</button>
+          <button className="btn-primary" onClick={onStart}>Get Started</button>
+        </div>
+      </nav>
+      <section className="hero fade-in">
+        <div className="buddy-pulse"><Buddy size={100} /></div>
+        <h1><span>Empowering</span><strong>Student Productivity</strong></h1>
+        <p>A smart academic ecosystem. Manage tasks, notes, focus sessions, and get AI-powered study assistance all in one place.</p>
+        <div className="hero-actions">
+          <button className="btn-lime" onClick={onStart}>Get Started Free</button>
+          <button className="btn-ghost large" onClick={onLogin}>Sign In</button>
+        </div>
+      </section>
+      <section className="feature-grid">
+        {features.map((feature) => (
+          <article className="card center" key={feature.title}>
+            <div className="feature-icon" style={{ color: feature.color }}>{feature.icon}</div>
+            <h3 style={{ color: feature.color }}>{feature.title}</h3>
+            <p>{feature.text}</p>
+          </article>
+        ))}
+      </section>
+    </main>
+  );
+}
+
+function Auth({ mode, onSuccess, onToggle }) {
+  const [form, setForm] = useState({ name: "", email: "", password: "", level: "Freshman", age: "", gender: "Male" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const update = (key) => (event) => setForm((next) => ({ ...next, [key]: event.target.value }));
+
+  const submit = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const users = store.get("mu", {});
+      if (mode === "signup") {
+        if (!form.name || !form.email || !form.password) throw new Error("Please fill all required fields.");
+        if (form.password.length < 6) throw new Error("Password must be at least 6 characters.");
+        if (users[form.email]) throw new Error("Email already registered.");
+        const user = { ...form, id: uid(), createdAt: nowIso() };
+        users[form.email] = user;
+        store.set("mu", users);
+        onSuccess(user);
+        return;
+      }
+      const user = users[form.email];
+      if (!user || user.password !== form.password) throw new Error("Invalid credentials.");
+      onSuccess(user);
+    } catch (nextError) {
+      console.error("[auth:submit]", nextError);
+      setError(nextError.message || "Authentication failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async () => {
+    setError("Google sign-in is temporarily disabled.");
+  };
+
+  return (
+    <main className="mesh auth-page">
+      <section className="auth-card glass2 fade-in">
+        <Buddy size={58} />
+        <h2>{mode === "signup" ? "Create Account" : "Welcome Back"}</h2>
+        <p>Masari</p>
+        <div className="form-stack">
+          {mode === "signup" && <input className="input" placeholder="Full Name *" value={form.name} onChange={update("name")} />}
+          <input className="input" type="email" placeholder="Email *" value={form.email} onChange={update("email")} />
+          <input className="input" type="password" placeholder="Password *" value={form.password} onChange={update("password")} />
+          {mode === "signup" && (
+            <>
+              <select className="input" value={form.level} onChange={update("level")}>{["Freshman", "Sophomore", "Junior", "Senior", "Graduate"].map((item) => <option key={item}>{item}</option>)}</select>
+              <div className="two-col">
+                <input className="input" type="number" placeholder="Age" min="10" max="60" value={form.age} onChange={update("age")} />
+                <select className="input" value={form.gender} onChange={update("gender")}><option>Male</option><option>Female</option><option>Other</option></select>
+              </div>
+            </>
+          )}
+          {error && <p className="error">{error}</p>}
+          <button className="btn-lime" disabled={loading} onClick={submit}>{loading ? "Loading..." : mode === "signup" ? "Create Account" : "Login"}</button>
+          <button className="btn-ghost" disabled onClick={loginWithGoogle}>Continue with Google</button>
+        </div>
+        <p className="switch">{mode === "signup" ? "Have an account? " : "New here? "}<button onClick={onToggle}>{mode === "signup" ? "Login" : "Sign Up"}</button></p>
+      </section>
+    </main>
+  );
+}
+
 const navItems = [
   { id: "dashboard", icon: "D", label: "Dashboard" },
   { id: "tasks", icon: "T", label: "Tasks" },
   { id: "notes", icon: "N", label: "Notes" },
-  { id: "pomodoro", icon: "25", label: "Pomodoro" }
+  { id: "pomodoro", icon: "25", label: "Pomodoro" },
+  { id: "garden", icon: "G", label: "Focus Garden" },
+  { id: "flight", icon: "F", label: "Focus Flight" },
+  { id: "candle", icon: "C", label: "Candle Focus" },
+  { id: "ai", icon: "AI", label: "AI Assistant" },
+  { id: "evolution", icon: "*", label: "AI Evolution" },
+  { id: "profile", icon: "P", label: "Profile" }
 ];
 
 function Sidebar({ active, onNav, user, onLogout }) {
@@ -241,7 +430,7 @@ function Dashboard({ user, onNav, tasks, notes, focusStats }) {
       </div>
       <div className="stat-grid">{stats.map((stat) => <article className="stat-card" key={stat.label}><p>{stat.label}</p><strong style={{ color: stat.color }}>{stat.value}</strong></article>)}</div>
       <div className="dashboard-grid">
-        <article className="glass panel"><h3>Quick Actions</h3>{[{ label: "Add Task", nav: "tasks" }, { label: "New Note", nav: "notes" }, { label: "Start Focus", nav: "pomodoro" }].map((item) => <button className="btn-ghost action" key={item.label} onClick={() => onNav(item.nav)}>{item.label}</button>)}</article>
+        <article className="glass panel"><h3>Quick Actions</h3>{[{ label: "Add Task", nav: "tasks" }, { label: "New Note", nav: "notes" }, { label: "Start Focus", nav: "pomodoro" }, { label: "Open Garden", nav: "garden" }, { label: "Plan a Flight", nav: "flight" }, { label: "AI Buddy", nav: "ai" }].map((item) => <button className="btn-ghost action" key={item.label} onClick={() => onNav(item.nav)}>{item.label}</button>)}</article>
         <article className="glass panel"><h3>Recent Tasks</h3>{tasks.slice(0, 4).map((task) => <div className="task-row mini" key={task.id}><span style={{ background: priorityColor[task.priority] }} /><p className={task.isCompleted ? "done" : ""}>{task.title}</p>{task.isCompleted && <b>Done</b>}</div>)}</article>
       </div>
     </section>
@@ -309,7 +498,7 @@ function Notes({ notes, setNotes }) {
   );
 }
 
-// الـ Component المتصلح تماماً لمنع التجميد والـ NaN أثناء تعديل الأرقام يدوياً
+// تعديل الـ الـ Pomodoro المظبوط لمنع التعليق والـ NaN والتحقق الآمن من الفراغات
 function Pomodoro({ settings, setSettings, focusStats, setFocusStats, setGardenState }) {
   const [phase, setPhase] = useState("focus");
   const [time, setTime] = useState(() => settings.focus * 60);
@@ -388,6 +577,7 @@ function Pomodoro({ settings, setSettings, focusStats, setFocusStats, setGardenS
     return () => clearInterval(id);
   }, [running, setFocusStats, setGardenState]);
 
+  // دالة الفحص الذكي لمنع التجميد أثناء مسح وإعادة كتابة الأرقام يدوياً
   const handleInputChange = (field, val) => {
     if (val === "") {
       setSettings(prev => ({ ...prev, [field]: "" }));
@@ -442,26 +632,57 @@ function Pomodoro({ settings, setSettings, focusStats, setFocusStats, setGardenS
   );
 }
 
+function Empty({ title }) {
+  return <div className="empty-state"><p>{title}</p></div>;
+}
+
 function App() {
+  const [user, setUser] = useState(() => store.get("c_u"));
   const [view, setView] = useState("dashboard");
-  const [tasks, setTasks] = useState(() => store.get("masari_tasks", defaultTasks));
-  const [notes, setNotes] = useState(() => store.get("masari_notes", defaultNotes));
-  const [settings, setSettings] = useState({ focus: 25, break: 5, sessions: 4 });
-  const [focusStats, setFocusStats] = useState(defaultFocusStats);
+  const [authMode, setAuthMode] = useState("login");
 
-  useEffect(() => { store.set("masari_tasks", tasks); }, [tasks]);
-  useEffect(() => { store.set("masari_notes", notes); }, [notes]);
+  const [tasks, setTasks] = useState(() => store.get(user ? cloudKey(user.id, "tasks") : "masari_tasks", defaultTasks));
+  const [notes, setNotes] = useState(() => store.get(user ? cloudKey(user.id, "notes") : "masari_notes", defaultNotes));
+  const [focusSettings, setFocusSettings] = useState(() => safeFocusSettings(store.get(user ? cloudKey(user.id, focusSettingsKey) : "masari_focus_settings", { focus: 25, break: 5, sessions: 4 })));
+  const [focusStats, setFocusStats] = useState(() => safeFocusStats(store.get(user ? cloudKey(user.id, focusStatsKey) : "masari_focus_stats", defaultFocusStats)));
+  const [gardenState, setGardenState] = useState(() => safeGarden(store.get(user ? cloudKey(user.id, focusGardenKey) : "masari_focus_garden")));
 
-  const user = { name: "Darin Samir", level: "Engineering Student" };
+  useEffect(() => {
+    store.set("c_u", user);
+    if (!user) {
+      setTasks(safeTasks(store.get("masari_tasks", defaultTasks)));
+      setNotes(safeNotes(store.get("masari_notes", defaultNotes)));
+      setFocusSettings(safeFocusSettings(store.get("masari_focus_settings", { focus: 25, break: 5, sessions: 4 })));
+      setFocusStats(safeFocusStats(store.get("masari_focus_stats", defaultFocusStats)));
+      setGardenState(safeGarden(store.get("masari_focus_garden")));
+    }
+  }, [user]);
+
+  useEffect(() => { if (user) store.set(cloudKey(user.id, "tasks"), tasks); else store.set("masari_tasks", tasks); }, [tasks, user]);
+  useEffect(() => { if (user) store.set(cloudKey(user.id, "notes"), notes); else store.set("masari_notes", notes); }, [notes, user]);
+  useEffect(() => { if (user) store.set(cloudKey(user.id, focusSettingsKey), focusSettings); else store.set("masari_focus_settings", focusSettings); }, [focusSettings, user]);
+  useEffect(() => { if (user) store.set(cloudKey(user.id, focusStatsKey), focusStats); else store.set("masari_focus_stats", focusStats); }, [focusStats, user]);
+  useEffect(() => { if (user) store.set(cloudKey(user.id, focusGardenKey), gardenState); else store.set("masari_focus_garden", gardenState); }, [gardenState, user]);
+
+  if (!user) {
+    if (view === "landing") return <Landing onStart={() => setAuthMode("signup")} onLogin={() => setAuthMode("login")} />;
+    return <Auth mode={authMode} onToggle={() => setAuthMode(authMode === "login" ? "signup" : "login")} onSuccess={(u) => { setUser(u); setView("dashboard"); }} />;
+  }
 
   return (
     <div className="app-layout">
-      <Sidebar active={view} onNav={setView} user={user} onLogout={() => alert("Logged out")} />
+      <Sidebar active={view} onNav={setView} user={user} onLogout={() => setUser(null)} />
       <main className="content">
         {view === "dashboard" && <Dashboard user={user} onNav={setView} tasks={tasks} notes={notes} focusStats={focusStats} />}
         {view === "tasks" && <Tasks tasks={tasks} setTasks={setTasks} />}
         {view === "notes" && <Notes notes={notes} setNotes={setNotes} />}
-        {view === "pomodoro" && <Pomodoro settings={settings} setSettings={setSettings} focusStats={focusStats} setFocusStats={setFocusStats} />}
+        {view === "pomodoro" && <Pomodoro settings={focusSettings} setSettings={setFocusSettings} focusStats={focusStats} setFocusStats={setFocusStats} setGardenState={setGardenState} />}
+        {["garden", "flight", "candle", "ai", "evolution", "profile"].includes(view) && (
+          <section className="fade-in panel glass">
+            <h2>{view.toUpperCase()} Component</h2>
+            <p>This module is under construction or separated in your current architecture. Core systems are running smoothly.</p>
+          </section>
+        )}
       </main>
     </div>
   );
