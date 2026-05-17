@@ -5,6 +5,7 @@ import "./styles.css";
 const uid = () => Math.random().toString(36).slice(2, 10);
 const nowIso = () => new Date().toISOString();
 const fmt = (iso) => (iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "-");
+
 const store = {
   get: (key, fallback = null) => {
     try {
@@ -42,6 +43,7 @@ const latestQuizKey = "masari_latest_quiz";
 const aiCacheKey = "masari_ai_cache";
 const aiCooldownMs = 7000;
 const splashDuration = 2800;
+
 const defaultTasks = [
   { id: uid(), title: "Study Chapter 4 - Algorithms", priority: "High", isCompleted: false, createdAt: nowIso() },
   { id: uid(), title: "Submit Math Assignment", priority: "High", isCompleted: true, createdAt: nowIso() },
@@ -49,11 +51,13 @@ const defaultTasks = [
   { id: uid(), title: "Prepare Presentation Slides", priority: "Medium", isCompleted: false, createdAt: nowIso() },
   { id: uid(), title: "Review English Grammar Notes", priority: "Low", isCompleted: true, createdAt: nowIso() }
 ];
+
 const defaultNotes = [
   { id: uid(), title: "Data Structures Summary", content: "Arrays, linked lists, trees, graphs, and Big O notes for common operations.", createdAt: nowIso() },
   { id: uid(), title: "Exam Prep: Calculus", content: "Focus on integrals, derivatives, and the chain rule. Practice problems from chapters 5-8.", createdAt: nowIso() },
   { id: uid(), title: "Project Ideas", content: "1. AI chatbot  2. Smart calendar  3. Study tracker app. Pick one by next week.", createdAt: nowIso() }
 ];
+
 const defaultAiMessages = [];
 const flightCities = {
   Cairo: [58, 63],
@@ -64,6 +68,7 @@ const flightCities = {
   Tokyo: [86, 45],
   "New York": [20, 42]
 };
+
 const flightTrips = [
   { id: "ams", label: "Cairo -> Amsterdam", from: "Cairo", to: "Amsterdam", distance: 3280 },
   { id: "paris", label: "Cairo -> Paris", from: "Cairo", to: "Paris", distance: 3210 },
@@ -78,15 +83,18 @@ const safeNumber = (value, fallback, min, max) => {
   if (!Number.isFinite(number)) return fallback;
   return Math.min(max, Math.max(min, number));
 };
+
 const safeFocusSettings = (value) => ({
   focus: safeNumber(value?.focus, 25, 1, 180),
   break: safeNumber(value?.break, 5, 1, 60),
   sessions: Math.round(safeNumber(value?.sessions, 4, 1, 12))
 });
+
 const safeGarden = (value) => ({
   minutes: safeNumber(value?.minutes, 0, 0, 100000),
   sessionsCompleted: Math.round(safeNumber(value?.sessionsCompleted, 0, 0, 10000))
 });
+
 const defaultFocusStats = {
   totalMinutes: 0,
   sessionsCompleted: 0,
@@ -96,6 +104,7 @@ const defaultFocusStats = {
   lastSessionDay: "",
   history: []
 };
+
 const safeFocusStats = (value) => ({
   totalMinutes: safeNumber(value?.totalMinutes, 0, 0, 100000),
   sessionsCompleted: Math.round(safeNumber(value?.sessionsCompleted, 0, 0, 10000)),
@@ -110,6 +119,7 @@ const safeFocusStats = (value) => ({
     xp: safeNumber(entry?.xp, 0, 0, 5000)
   })) : []
 });
+
 const safeCandleFocus = (value) => ({
   preset: safeNumber(value?.preset, 60, 15, 180),
   glow: safeNumber(value?.glow, 72, 20, 100),
@@ -117,6 +127,7 @@ const safeCandleFocus = (value) => ({
   soundOn: Boolean(value?.soundOn),
   previewSeconds: safeNumber(value?.previewSeconds, 60 * 60, 60, 180 * 60)
 });
+
 const safeTasks = (value) => Array.isArray(value) ? value.map((task) => ({
   id: task?.id || uid(),
   title: typeof task?.title === "string" ? task.title : "",
@@ -124,12 +135,14 @@ const safeTasks = (value) => Array.isArray(value) ? value.map((task) => ({
   isCompleted: Boolean(task?.isCompleted),
   createdAt: typeof task?.createdAt === "string" ? task.createdAt : nowIso()
 })).filter((task) => task.title.trim()) : [];
+
 const safeNotes = (value) => Array.isArray(value) ? value.map((note) => ({
   id: note?.id || uid(),
   title: typeof note?.title === "string" ? note.title : "",
   content: typeof note?.content === "string" ? note.content : "",
   createdAt: typeof note?.createdAt === "string" ? note.createdAt : nowIso()
 })).filter((note) => note.title.trim()) : [];
+
 const safeProfile = (value, authUser = null) => ({
   id: authUser?.uid || value?.id || "",
   name: typeof value?.name === "string" && value.name.trim() ? value.name : authUser?.displayName || "",
@@ -140,14 +153,16 @@ const safeProfile = (value, authUser = null) => ({
   photoURL: typeof value?.photoURL === "string" ? value.photoURL : authUser?.photoURL || "",
   createdAt: typeof value?.createdAt === "string" ? value.createdAt : nowIso()
 });
+
 const safeAiMessages = (value, userName = "there") => {
   const messages = Array.isArray(value)
     ? value
       .filter((message) => message && typeof message.text === "string" && message.text.trim())
       .map((message) => ({ role: message.role === "user" ? "user" : "assistant", text: message.text }))
     : [];
-  return messages.length ? messages : [{ role: "assistant", text: `Hi ${String(userName || "there").split(" ")[0] || "there"}! I'm Masari Buddy. Upload a PDF, DOCX, or TXT file, or ask me for study help.` }];
+  return messages.length ? messages : [{ role: "assistant", text: `Hi ${String(userName || "there").split(" ")[0] || "there"}! I'm Masari Buddy. Ask me any study help.` }];
 };
+
 const defaultFlight = {
   tripId: "ams",
   origin: "Cairo",
@@ -164,6 +179,7 @@ const defaultFlight = {
   arrived: false,
   xp: 0
 };
+
 const safeFlight = (value) => {
   const base = { ...defaultFlight, ...(value && typeof value === "object" ? value : {}) };
   const hours = safeNumber(base.hours, 4, 0, 48);
@@ -196,8 +212,10 @@ const previousDayStamp = (stamp) => {
   date.setDate(date.getDate() - 1);
   return dayStamp(date);
 };
+
 const cloudKey = (uid, key) => `masari_${uid}_${key}`;
 const sameJson = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+
 const applyFocusSession = (current, minutes) => {
   const today = dayStamp();
   const gainedXp = Math.max(8, Math.round(minutes * 2.4));
@@ -344,10 +362,6 @@ function Auth({ mode, onSuccess, onToggle }) {
     }
   };
 
-  const loginWithGoogle = async () => {
-    setError("Google sign-in is temporarily disabled.");
-  };
-
   return (
     <main className="mesh auth-page">
       <section className="auth-card glass2 fade-in">
@@ -369,7 +383,6 @@ function Auth({ mode, onSuccess, onToggle }) {
           )}
           {error && <p className="error">{error}</p>}
           <button className="btn-lime" disabled={loading} onClick={submit}>{loading ? "Loading..." : mode === "signup" ? "Create Account" : "Login"}</button>
-          <button className="btn-ghost" disabled onClick={loginWithGoogle}>Continue with Google</button>
         </div>
         <p className="switch">{mode === "signup" ? "Have an account? " : "New here? "}<button onClick={onToggle}>{mode === "signup" ? "Login" : "Sign Up"}</button></p>
       </section>
@@ -386,7 +399,6 @@ const navItems = [
   { id: "flight", icon: "F", label: "Focus Flight" },
   { id: "candle", icon: "C", label: "Candle Focus" },
   { id: "ai", icon: "AI", label: "AI Assistant" },
-  { id: "evolution", icon: "*", label: "AI Evolution" },
   { id: "profile", icon: "P", label: "Profile" }
 ];
 
@@ -458,7 +470,7 @@ function Tasks({ tasks, setTasks }) {
       <div className="section-head"><h2>Task Management</h2><button className="btn-primary" onClick={() => setShowForm(true)}>+ New Task</button></div>
       {showForm && <div className="glass2 edit-box"><input className="input" placeholder="Task title..." value={form.title} onChange={(e) => setForm((next) => ({ ...next, title: e.target.value }))} onKeyDown={(e) => e.key === "Enter" && add()} /><select className="input" value={form.priority} onChange={(e) => setForm((next) => ({ ...next, priority: e.target.value }))}><option>High</option><option>Medium</option><option>Low</option></select><button className="btn-primary" onClick={add}>{editing ? "Save" : "Add"}</button><button className="btn-ghost" onClick={() => { setShowForm(false); setEditing(null); }}>Cancel</button></div>}
       <div className="filters">{["all", "pending", "done"].map((status) => <button key={status} className={filter.status === status ? "btn-primary" : "btn-ghost"} onClick={() => setFilter((next) => ({ ...next, status }))}>{status}</button>)}{["all", "High", "Medium", "Low"].map((priority) => <button key={priority} className={filter.priority === priority ? "btn-primary" : "btn-ghost"} onClick={() => setFilter((next) => ({ ...next, priority }))}>{priority}</button>)}</div>
-      <div className="stack small">{filtered.length === 0 ? <p>No tasks found.</p> : filtered.map((task) => <div className="glass task-item" key={task.id} style={{ borderLeftColor: priorityColor[task.priority] }}><button className={`check ${task.isCompleted ? "on" : ""}`} onClick={() => save(tasks.map((item) => item.id === task.id ? { ...item, isCompleted: !item.isCompleted } : item))}>✓</button><p className={task.isCompleted ? "done" : ""}>{task.title}</p><span className="tag" style={{ background: priorityBg[task.priority], color: priorityColor[task.priority] }}>{task.priority}</span><small>{fmt(task.createdAt)}</small><button className="icon-btn" onClick={() => { setForm({ title: task.title, priority: task.priority }); setEditing(task.id); setShowForm(true); }}>Edit</button><button className="icon-btn danger-text" onClick={() => save(tasks.filter((item) => item.id !== task.id))}>Delete</button></div>)}</div>
+      <div className="stack small">{filtered.length === 0 ? <p className="empty-text">No tasks found.</p> : filtered.map((task) => <div className="glass task-item" key={task.id} style={{ borderLeftColor: priorityColor[task.priority] }}><button className={`check ${task.isCompleted ? "on" : ""}`} onClick={() => save(tasks.map((item) => item.id === task.id ? { ...item, isCompleted: !item.isCompleted } : item))}>✓</button><p className={task.isCompleted ? "done" : ""}>{task.title}</p><span className="tag" style={{ background: priorityBg[task.priority], color: priorityColor[task.priority] }}>{task.priority}</span><small>{fmt(task.createdAt)}</small><button className="icon-btn" onClick={() => { setForm({ title: task.title, priority: task.priority }); setEditing(task.id); setShowForm(true); }}>Edit</button><button className="icon-btn danger-text" onClick={() => save(tasks.filter((item) => item.id !== task.id))}>Delete</button></div>)}</div>
     </section>
   );
 }
@@ -493,12 +505,11 @@ function Notes({ notes, setNotes }) {
     <section className="fade-in stack">
       <div className="section-head"><h2>Notes</h2><button className="btn-primary" onClick={() => setView("new")}>+ New Note</button></div>
       <input className="input" placeholder="Search notes..." value={search} onChange={(e) => setSearch(e.target.value)} />
-      {visible.length === 0 ? <p>Create your first note.</p> : <div className="notes-grid">{visible.map((note) => <article className="card note-card" key={note.id} onClick={() => setView({ id: note.id })}><h3>{note.title}</h3><p>{note.content}</p><small>{fmt(note.createdAt)}</small></article>)}</div>}
+      {visible.length === 0 ? <p className="empty-text">No notes found.</p> : <div className="notes-grid">{visible.map((note) => <article className="card note-card" key={note.id} onClick={() => setView({ id: note.id })}><h3>{note.title}</h3><p>{note.content}</p><small>{fmt(note.createdAt)}</small></article>)}</div>}
     </section>
   );
 }
 
-// تعديل الـ الـ Pomodoro المظبوط لمنع التعليق والـ NaN والتحقق الآمن من الفراغات
 function Pomodoro({ settings, setSettings, focusStats, setFocusStats, setGardenState }) {
   const [phase, setPhase] = useState("focus");
   const [time, setTime] = useState(() => settings.focus * 60);
@@ -556,9 +567,7 @@ function Pomodoro({ settings, setSettings, focusStats, setFocusStats, setGardenS
           setCompletedSessions(nextCompleted);
           const nextStats = applyFocusSession(focusStats, activeSettings.focus);
           setFocusStats(nextStats);
-          if (setGardenState) {
-            setGardenState(safeGarden({ minutes: nextStats.totalMinutes, sessionsCompleted: nextStats.sessionsCompleted }));
-          }
+          setGardenState(safeGarden({ minutes: nextStats.totalMinutes, sessionsCompleted: nextStats.sessionsCompleted }));
           if (nextCompleted >= activeSettings.sessions) {
             setRunning(false);
             phaseRef.current = "focus";
@@ -577,119 +586,296 @@ function Pomodoro({ settings, setSettings, focusStats, setFocusStats, setGardenS
     return () => clearInterval(id);
   }, [running, setFocusStats, setGardenState]);
 
-  // دالة الفحص الذكي لمنع التجميد أثناء مسح وإعادة كتابة الأرقام يدوياً
-  const handleInputChange = (field, val) => {
-    if (val === "") {
-      setSettings(prev => ({ ...prev, [field]: "" }));
-      return;
-    }
-    const num = Math.round(Number(val));
-    if (!isNaN(num) && num > 0) {
-      persistSettings({ ...settings, [field]: num });
-    }
-  };
-
   return (
     <section className="fade-in focus-studio">
       <div className="section-head">
-        <div><h2>Pomodoro</h2><p>Minimal and stable. Fixed manual input tracking.</p></div>
+        <div><h2>Pomodoro</h2><p>Minimal and stable tracker.</p></div>
       </div>
       <div className="focus-grid">
         <article className="glass focus-panel">
           <div className="focus-form">
             <label>Focus min
-              <input className="input" type="number" value={settings.focus} min="1" max="180" onChange={(e) => handleInputChange("focus", e.target.value)} />
+              <input 
+                className="input" 
+                type="number" 
+                value={settings.focus} 
+                min="1" 
+                max="180" 
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val)) persistSettings({ ...settings, focus: val });
+                }} 
+              />
             </label>
             <label>Break min
-              <input className="input" type="number" value={settings.break} min="1" max="60" onChange={(e) => handleInputChange("break", e.target.value)} />
+              <input 
+                className="input" 
+                type="number" 
+                value={settings.break} 
+                min="1" 
+                max="60" 
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val)) persistSettings({ ...settings, break: val });
+                }} 
+              />
             </label>
             <label>Sessions
-              <input className="input" type="number" value={settings.sessions} min="1" max="12" onChange={(e) => handleInputChange("sessions", e.target.value)} />
+              <input 
+                className="input" 
+                type="number" 
+                value={settings.sessions} 
+                min="1" 
+                max="12" 
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val)) persistSettings({ ...settings, sessions: val });
+                }} 
+              />
             </label>
           </div>
           <div className="clock premium-clock">
-            <svg width="220" height="220">
-              <circle cx="110" cy="110" r={radius} />
-              <circle cx="110" cy="110" r={radius} strokeDasharray={circumference} strokeDashoffset={circumference * (1 - phaseProgress)} />
-            </svg>
-            <strong>{String(Math.floor((Number(time) || 0) / 60)).padStart(2, "0")}:{String((Number(time) || 0) % 60).padStart(2, "0")}</strong>
-            <span>{phase} · session {Math.min(completedSessions + 1, Number(settings.sessions) || 1)}/{Number(settings.sessions) || 1}</span>
+            <svg width="220" height="220"><circle cx="110" cy="110" r={radius} /><circle cx="110" cy="110" r={radius} strokeDasharray={circumference} strokeDashoffset={circumference * (1 - phaseProgress)} /></svg>
+            <strong>{String(Math.floor(time / 60)).padStart(2, "0")}:{String(time % 60).padStart(2, "0")}</strong>
+            <span>{phase} · session {Math.min(completedSessions + 1, settings.sessions)}/{settings.sessions}</span>
           </div>
           <div className="focus-actions">
-            <button className="btn-primary" onClick={() => setRunning(true)} disabled={running || !settings.focus}>Start</button>
+            <button className="btn-primary" onClick={() => setRunning(true)} disabled={running}>Start</button>
             <button className="btn-ghost" onClick={() => setRunning(false)} disabled={!running}>Pause</button>
             <button className="btn-ghost" onClick={resetTimer}>Reset</button>
           </div>
-        </article>
-        <article className="glass pomodoro-status">
-          <span>Core timer</span>
-          <h3>{running ? (phase === "focus" ? "Focused" : "On Break") : "Ready"}</h3>
-          <p>{settings.focus || 0} min focus, {settings.break || 0} min break, {settings.sessions || 0} planned sessions.</p>
-          <strong>{completedSessions}/{settings.sessions || 0} sessions completed this run</strong>
         </article>
       </div>
     </section>
   );
 }
 
-function Empty({ title }) {
-  return <div className="empty-state"><p>{title}</p></div>;
-}
+// STUBS FOR REMAINING MODULES
+function FocusGarden() { return <div className="glass panel"><h3>Focus Garden</h3><p>Your garden grows as you complete focus hours.</p></div>; }
+function FocusFlight() { return <div className="glass panel"><h3>Focus Flight</h3><p>Track simulated trips using active study sessions.</p></div>; }
+function CandleFocus() { return <div className="glass panel"><h3>Candle Focus</h3><p>Ambiance and visual focus companion.</p></div>; }
+function AiAssistant() { return <div className="glass panel"><h3>AI Assistant</h3><p>Your AI study buddy is ready to assist.</p></div>; }
+function Profile({ user }) { return <div className="glass panel"><h3>Profile</h3><p>Name: {user.name}</p><p>Level: {user.level}</p></div>; }
 
-function App() {
-  const [user, setUser] = useState(() => store.get("c_u"));
+export default function App() {
+  const [user, setUser] = useState(() => store.get("c_user", null));
   const [view, setView] = useState("dashboard");
-  const [authMode, setAuthMode] = useState("login");
+  const [tasks, setTasks] = useState(() => safeTasks(store.get("masari_tasks", defaultTasks)));
+  const [notes, setNotes] = useState(() => safeNotes(store.get("masari_notes", defaultNotes)));
+  
+  const [focusSettings, setFocusSettings] = useUserDocState(user?.id, focusSettingsKey, { focus: 25, break: 5, sessions: 4 }, safeFocusSettings);
+  const [focusStats, setFocusStats] = useUserDocState(user?.id, focusStatsKey, defaultFocusStats, safeFocusStats);
+  const [, setGardenState] = useUserDocState(user?.id, focusGardenKey, { minutes: 0, sessionsCompleted: 0 }, safeGarden);
 
-  const [tasks, setTasks] = useState(() => store.get(user ? cloudKey(user.id, "tasks") : "masari_tasks", defaultTasks));
-  const [notes, setNotes] = useState(() => store.get(user ? cloudKey(user.id, "notes") : "masari_notes", defaultNotes));
-  const [focusSettings, setFocusSettings] = useState(() => safeFocusSettings(store.get(user ? cloudKey(user.id, focusSettingsKey) : "masari_focus_settings", { focus: 25, break: 5, sessions: 4 })));
-  const [focusStats, setFocusStats] = useState(() => safeFocusStats(store.get(user ? cloudKey(user.id, focusStatsKey) : "masari_focus_stats", defaultFocusStats)));
-  const [gardenState, setGardenState] = useState(() => safeGarden(store.get(user ? cloudKey(user.id, focusGardenKey) : "masari_focus_garden")));
-
-  useEffect(() => {
-    store.set("c_u", user);
-    if (!user) {
-      setTasks(safeTasks(store.get("masari_tasks", defaultTasks)));
-      setNotes(safeNotes(store.get("masari_notes", defaultNotes)));
-      setFocusSettings(safeFocusSettings(store.get("masari_focus_settings", { focus: 25, break: 5, sessions: 4 })));
-      setFocusStats(safeFocusStats(store.get("masari_focus_stats", defaultFocusStats)));
-      setGardenState(safeGarden(store.get("masari_focus_garden")));
-    }
-  }, [user]);
-
-  useEffect(() => { if (user) store.set(cloudKey(user.id, "tasks"), tasks); else store.set("masari_tasks", tasks); }, [tasks, user]);
-  useEffect(() => { if (user) store.set(cloudKey(user.id, "notes"), notes); else store.set("masari_notes", notes); }, [notes, user]);
-  useEffect(() => { if (user) store.set(cloudKey(user.id, focusSettingsKey), focusSettings); else store.set("masari_focus_settings", focusSettings); }, [focusSettings, user]);
-  useEffect(() => { if (user) store.set(cloudKey(user.id, focusStatsKey), focusStats); else store.set("masari_focus_stats", focusStats); }, [focusStats, user]);
-  useEffect(() => { if (user) store.set(cloudKey(user.id, focusGardenKey), gardenState); else store.set("masari_focus_garden", gardenState); }, [gardenState, user]);
+  useEffect(() => { store.set("masari_tasks", tasks); }, [tasks]);
+  useEffect(() => { store.set("masari_notes", notes); }, [notes]);
+  useEffect(() => { if (user) store.set("c_user", user); else store.del("c_user"); }, [user]);
 
   if (!user) {
-    if (view === "landing") return <Landing onStart={() => setAuthMode("signup")} onLogin={() => setAuthMode("login")} />;
-    return <Auth mode={authMode} onToggle={() => setAuthMode(authMode === "login" ? "signup" : "login")} onSuccess={(u) => { setUser(u); setView("dashboard"); }} />;
+    return <Auth mode="login" onSuccess={(u) => setUser(u)} onToggle={() => {}} />;
   }
+
+  const renderContent = () => {
+    switch (view) {
+      case "dashboard": return <Dashboard user={user} onNav={setView} tasks={tasks} notes={notes} focusStats={focusStats} />;
+      case "tasks": return <Tasks tasks={tasks} setTasks={setTasks} />;
+      case "notes": return <Notes notes={notes} setNotes={setNotes} />;
+      case "pomodoro": return <Pomodoro settings={focusSettings} setSettings={setFocusSettings} focusStats={focusStats} setFocusStats={setFocusStats} setGardenState={setGardenState} />;
+      case "garden": return <FocusGarden />;
+      case "flight": return <FocusFlight />;
+      case "candle": return <CandleFocus />;
+      case "ai": return <AiAssistant />;
+      case "profile": return <Profile user={user} />;
+      default: return <Dashboard user={user} onNav={setView} tasks={tasks} notes={notes} focusStats={focusStats} />;
+    }
+  };
 
   return (
     <div className="app-layout">
       <Sidebar active={view} onNav={setView} user={user} onLogout={() => setUser(null)} />
-      <main className="content">
-        {view === "dashboard" && <Dashboard user={user} onNav={setView} tasks={tasks} notes={notes} focusStats={focusStats} />}
-        {view === "tasks" && <Tasks tasks={tasks} setTasks={setTasks} />}
-        {view === "notes" && <Notes notes={notes} setNotes={setNotes} />}
-        {view === "pomodoro" && <Pomodoro settings={focusSettings} setSettings={setFocusSettings} focusStats={focusStats} setFocusStats={setFocusStats} setGardenState={setGardenState} />}
-        {["garden", "flight", "candle", "ai", "evolution", "profile"].includes(view) && (
-          <section className="fade-in panel glass">
-            <h2>{view.toUpperCase()} Component</h2>
-            <p>This module is under construction or separated in your current architecture. Core systems are running smoothly.</p>
-          </section>
-        )}
-      </main>
+      <main className="content-area">{renderContent()}</main>
     </div>
   );
 }
 
-const rootElement = document.getElementById("root");
-if (rootElement) {
-  createRoot(rootElement).render(<App />);
+const container = document.getElementById("root");
+const root = createRoot(container);
+root.render(<App />);
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import "./styles.css";
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+const nowIso = () => new Date().toISOString();
+const fmt = (iso) => (iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "-");
+
+const store = {
+  get: (key, fallback = null) => {
+    try {
+      const value = localStorage.getItem(key);
+      return value ? JSON.parse(value) : fallback;
+    } catch (error) {
+      console.error(`[storage:get:${key}]`, error);
+      return fallback;
+    }
+  },
+  set: (key, value) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error(`[storage:set:${key}]`, error);
+    }
+  },
+  del: (key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error(`[storage:del:${key}]`, error);
+    }
+  }
+};
+
+const priorityColor = { High: "#ef4444", Medium: "#f59e0b", Low: "#22c55e" };
+const priorityBg = { High: "rgba(239,68,68,0.12)", Medium: "rgba(245,158,11,0.12)", Low: "rgba(34,197,94,0.12)" };
+const focusSettingsKey = "masari_focus_settings";
+const focusStatsKey = "masari_focus_stats";
+const focusGardenKey = "masari_focus_garden";
+const focusFlightKey = "masari_focus_flight";
+const candleFocusKey = "masari_candle_focus";
+const latestQuizKey = "masari_latest_quiz";
+const aiCacheKey = "masari_ai_cache";
+const aiCooldownMs = 7000;
+
+const defaultTasks = [
+  { id: uid(), title: "Study Chapter 4 - Algorithms", priority: "High", isCompleted: false, createdAt: nowIso() },
+  { id: uid(), title: "Submit Math Assignment", priority: "High", isCompleted: true, createdAt: nowIso() },
+  { id: uid(), title: "Read Research Paper", priority: "Medium", isCompleted: false, createdAt: nowIso() }
+];
+
+const defaultNotes = [
+  { id: uid(), title: "Data Structures Summary", content: "Arrays, linked lists, trees, graphs, and Big O notes.", createdAt: nowIso() }
+];
+
+const flightCities = {
+  Cairo: [58, 63], Amsterdam: [47, 31], Paris: [44, 36],
+  London: [42, 31], Dubai: [66, 66], Tokyo: [86, 45], "New York": [20, 42]
+};
+
+const flightTrips = [
+  { id: "ams", label: "Cairo -> Amsterdam", from: "Cairo", to: "Amsterdam", distance: 3280 },
+  { id: "paris", label: "Cairo -> Paris", from: "Cairo", to: "Paris", distance: 3210 },
+  { id: "london", label: "Cairo -> London", from: "Cairo", to: "London", distance: 3510 },
+  { id: "dubai", label: "Cairo -> Dubai", from: "Cairo", to: "Dubai", distance: 2420 },
+  { id: "tokyo", label: "Cairo -> Tokyo", from: "Cairo", to: "Tokyo", distance: 9560 },
+  { id: "new-york", label: "Cairo -> New York", from: "Cairo", to: "New York", distance: 9020 }
+];
+
+const safeNumber = (value, fallback, min, max) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+};
+
+const safeFocusSettings = (value) => ({
+  focus: safeNumber(value?.focus, 25, 1, 180),
+  break: safeNumber(value?.break, 5, 1, 60),
+  sessions: Math.round(safeNumber(value?.sessions, 4, 1, 12))
+});
+
+const safeGarden = (value) => ({
+  minutes: safeNumber(value?.minutes, 0, 0, 100000),
+  sessionsCompleted: Math.round(safeNumber(value?.sessionsCompleted, 0, 0, 10000))
+});
+
+const defaultFocusStats = { totalMinutes: 0, sessionsCompleted: 0, xp: 0, streak: 0, longestStreak: 0, lastSessionDay: "", history: [] };
+
+const safeFocusStats = (value) => ({
+  totalMinutes: safeNumber(value?.totalMinutes, 0, 0, 100000),
+  sessionsCompleted: Math.round(safeNumber(value?.sessionsCompleted, 0, 0, 10000)),
+  xp: safeNumber(value?.xp, 0, 0, 1000000),
+  streak: Math.round(safeNumber(value?.streak, 0, 0, 3650)),
+  longestStreak: Math.max(safeNumber(value?.longestStreak, 0, 0, 3650), safeNumber(value?.streak, 0, 0, 3650)),
+  lastSessionDay: typeof value?.lastSessionDay === "string" ? value.lastSessionDay : "",
+  history: Array.isArray(value?.history) ? value.history.slice(0, 30) : []
+});
+
+const safeCandleFocus = (value) => ({
+  preset: safeNumber(value?.preset, 60, 15, 180),
+  glow: safeNumber(value?.glow, 72, 20, 100),
+  ambience: typeof value?.ambience === "string" ? value.ambience : "Library hush",
+  soundOn: Boolean(value?.soundOn),
+  previewSeconds: safeNumber(value?.previewSeconds, 3600, 60, 10800)
+});
+
+const safeTasks = (value) => Array.isArray(value) ? value.map(t => ({...t, id: t.id || uid()})) : [];
+const safeNotes = (value) => Array.isArray(value) ? value.map(n => ({...n, id: n.id || uid()})) : [];
+
+const dayStamp = (value = new Date()) => new Date(value).toISOString().slice(0, 10);
+const previousDayStamp = (stamp) => {
+  if (!stamp) return "";
+  const date = new Date(`${stamp}T00:00:00`);
+  date.setDate(date.getDate() - 1);
+  return dayStamp(date);
+};
+
+const cloudKey = (uid, key) => `masari_${uid}_${key}`;
+
+const applyFocusSession = (current, minutes) => {
+  const today = dayStamp();
+  const gainedXp = Math.max(8, Math.round(minutes * 2.4));
+  const streak = current.lastSessionDay === today ? current.streak : current.lastSessionDay === previousDayStamp(today) ? current.streak + 1 : 1;
+  return safeFocusStats({
+    ...current,
+    totalMinutes: current.totalMinutes + minutes,
+    sessionsCompleted: current.sessionsCompleted + 1,
+    xp: current.xp + gainedXp,
+    streak,
+    longestStreak: Math.max(current.longestStreak, streak),
+    lastSessionDay: today,
+    history: [{ id: uid(), date: nowIso(), minutes, xp: gainedXp }, ...current.history].slice(0, 30)
+  });
+};
+
+function useUserDocState(userId, key, fallbackValue, sanitize) {
+  const fallbackStorageKey = userId ? cloudKey(userId, key) : null;
+  const [state, setState] = useState(() => sanitize(fallbackStorageKey ? store.get(fallbackStorageKey, fallbackValue) : fallbackValue));
+  useEffect(() => {
+    if (!fallbackStorageKey) return;
+    store.set(fallbackStorageKey, state);
+  }, [fallbackStorageKey, state]);
+  return [state, setState];
 }
 
+function Buddy({ size = 80, anim = true }) {
+  return (
+    <div style={{ width: size, height: size }} className={anim ? "buddy buddy-float" : "buddy"}>
+      <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="bg"><stop offset="0%" stopColor="#7c3aed" /><stop offset="100%" stopColor="#4c1d95" /></radialGradient>
+          <radialGradient id="face"><stop offset="0%" stopColor="#1e1b4b" /><stop offset="100%" stopColor="#0f0b2d" /></radialGradient>
+        </defs>
+        <circle cx="40" cy="40" r="34" fill="url(#bg)" />
+        <ellipse cx="40" cy="44" rx="22" ry="20" fill="url(#face)" />
+        <ellipse cx="33" cy="42" rx="2.5" ry="3" fill="#a3e635" />
+        <ellipse cx="47" cy="42" rx="2.5" ry="3" fill="#a3e635" />
+        <path d="M32 52 Q40 58 48 52" stroke="#a3e635" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      </svg>
+    </div>
+  );
+}
+
+function Landing({ onStart, onLogin }) {
+  return (
+    <main className="mesh landing">
+      <nav className="topbar">
+        <div className="brand"><Buddy size={36} anim={false} /><span>Masari</span></div>
+        <div className="row"><button className="btn-ghost" onClick={onLogin}>Login</button><button className="btn-primary" onClick={onStart}>Get Started</button></div>
+      </nav>
+      <section className="hero fade-in">
+        <Buddy size={100} />
+        <h1><span>Empowering</span><strong>Student Productivity</strong></h1>
+        <div className="hero-actions"><button className="btn-lime" onClick={onStart}>Get Started Free</button></div>
+      </section>
+    </main>
+  );
+}
